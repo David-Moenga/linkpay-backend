@@ -12,6 +12,13 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 import os
+import warnings
+
+
+def _env_list(value):
+    """Parse a comma-separated environment variable into a list of stripped items."""
+    return [item.strip() for item in (value or "").split(",") if item.strip()]
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +28,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-#7a&wk!($bdc@sk#z101dq47pn3a4whz6+e!dfs8uq($&6nz^z"
+_insecure_secret_key = "django-insecure-#7a&wk!($bdc@sk#z101dq47pn3a4whz6+e!dfs8uq($&6nz^z"
+if os.environ.get("DJANGO_SECRET_KEY"):
+    SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+else:
+    warnings.warn(
+        "DJANGO_SECRET_KEY is not set, falling back to an insecure development key.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+    SECRET_KEY = _insecure_secret_key
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DJANGO_ENV=development only for local development.
+DJANGO_ENV = os.environ.get("DJANGO_ENV", "production").lower()
+DEBUG = DJANGO_ENV in ("development", "dev")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = _env_list(os.environ.get("DJANGO_ALLOWED_HOSTS", ""))
 
 
 # Application definition
@@ -155,5 +173,5 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS","http://localhost:3000,http://127.0.0.1:3000").split(",") if o.strip()]
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS","http://localhost:3000,http://127.0.0.1:3000").split(",") if o.strip()]
+CORS_ALLOWED_ORIGINS = _env_list(os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"))
+CSRF_TRUSTED_ORIGINS = _env_list(os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"))
